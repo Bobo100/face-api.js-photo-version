@@ -38,12 +38,11 @@ function Home() {
             const displaySize = { width: photoWidth, height: photoHeight };
             faceapi.matchDimensions(canvas, displaySize);
 
-            const detections = await faceapi.detectAllFaces(img, new faceapi.SsdMobilenetv1Options())
+            const detections = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options())
                 .withFaceLandmarks();
-            // console.log(detections[0].detection.box.area / (detections[0].detection.imageHeight * detections[0].detection.imageWidth) * 100);
-            console.log(detections[0].detection.box.area);
-            console.log(detections[0]);
-            setFaceArea(detections[0].detection.box.area / (detections[0].detection.imageHeight * detections[0].detection.imageWidth) * 100);
+                
+            console.log(detections);
+            setFaceArea(detections.detection.box.area / (detections.detection.imageHeight * detections.detection.imageWidth) * 100);
 
             const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
