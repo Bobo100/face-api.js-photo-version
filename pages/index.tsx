@@ -1,15 +1,15 @@
 import Head from "next/head";
 import Layout from '../components/layout';
-import Home from "../components/home/home";
+import SingleImageComponent from "../components/singleImageComponent/singleImageComponent";
 
 
 function HomePage() {
     return (
         <Layout>
             <Head>
-                <title>Home</title>
+                <title>singleImage</title>
             </Head>
-            <Home />
+            <SingleImageComponent />
         </Layout>
     )
 }

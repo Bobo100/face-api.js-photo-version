@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as faceapi from 'face-api.js';
-import styles from './home.module.scss';
+import styles from './singleImageComponent.module.scss';
 
-function Home() {
+function singleImageComponent() {
     const [modelsLoaded, setModelsLoaded] = useState(false);
     const photoRef = useRef<HTMLImageElement>(null);
     const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
@@ -70,4 +70,4 @@ function Home() {
     );
 }
 
-export default Home;
+export default singleImageComponent;

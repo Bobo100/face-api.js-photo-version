@@ -5,8 +5,9 @@ interface LayoutProps {
     children: React.ReactNode;
 }
 export default function Layout({ children }: LayoutProps) {
-    return (<div className="App">
-        <div >
+    return (<div>
+        <NavBar />
+        <div className="pt-20">
             {children}
         </div>
     </div>);

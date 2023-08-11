@@ -5,7 +5,8 @@ const RouterLink = () => {
     const router = useRouter()
     return (
         <>
-            <Link href="/" className={router.pathname === "/" ? "active" : ""}>回到首頁</Link>
+            <Link href="/" className={router.pathname === "/" ? "active" : ""}>Single Image</Link>
+            <Link href="/multipleImage" className={router.pathname === "/multipleImage" ? "active" : ""}>Multiple Image</Link>
         </>
     )
 }
