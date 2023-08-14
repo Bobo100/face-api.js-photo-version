@@ -7,6 +7,7 @@ function MultipleImageComponent() {
     const [photos, setPhotos] = useState<string[]>([]);
     const [faceAreas, setFaceAreas] = useState<number[]>([]);
     const [messages, setMessages] = useState<string[]>([]);
+    const [processingTimes, setProcessingTimes] = useState<number[]>([]);
     const canvasRefs = useRef<HTMLCanvasElement[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
@@ -47,6 +48,7 @@ function MultipleImageComponent() {
 
     const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         const img = e.target as HTMLImageElement;
+        const startTime = performance.now(); // 記錄開始時間
         const imageUrl = img.src;
         const index = photos.indexOf(imageUrl);
         if (modelsLoaded && canvasRefs.current[index] && img.complete) {
@@ -60,6 +62,16 @@ function MultipleImageComponent() {
                 .withFaceLandmarks();
 
             const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+            // 計算處理時間並轉換為秒
+            const endTime = performance.now();
+            const processingTime = (endTime - startTime) / 1000;
+            // 更新處理時間的狀態
+            setProcessingTimes(prevProcessingTimes => {
+                const newProcessingTimes = [...prevProcessingTimes];
+                newProcessingTimes[index] = processingTime;
+                return newProcessingTimes;
+            });
 
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
@@ -165,6 +177,7 @@ function MultipleImageComponent() {
                             <button className={styles.removeButton} onClick={() => removePhoto(index)}>X</button>
                         </div>
                         <div>Area: {faceAreas[index]}%</div>
+                        <div>Processing Time: {processingTimes[index]}s</div>
                     </div>
                 ))}
 
