@@ -7,8 +7,9 @@ function MultipleImageComponent() {
     const [photos, setPhotos] = useState<string[]>([]);
     const [faceAreas, setFaceAreas] = useState<number[]>([]);
     const [messages, setMessages] = useState<string[]>([]);
+    // 處理各張圖片的時間，單位為秒，用於顯示在畫面上
     const [processingTimes, setProcessingTimes] = useState<number[]>([]);
-    const canvasRefs = useRef<HTMLCanvasElement[]>([]);
+    // const canvasRefs = useRef<HTMLCanvasElement[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
         const loadModels = async () => {
@@ -16,8 +17,8 @@ function MultipleImageComponent() {
 
             await Promise.all([
                 faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                // faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                // faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
             ]);
 
             setModelsLoaded(true);
@@ -51,17 +52,10 @@ function MultipleImageComponent() {
         const startTime = performance.now(); // 記錄開始時間
         const imageUrl = img.src;
         const index = photos.indexOf(imageUrl);
-        if (modelsLoaded && canvasRefs.current[index] && img.complete) {
-            const canvas = canvasRefs.current[index];
-            const displaySize = { width: img.width, height: img.height };
-            faceapi.matchDimensions(canvas, displaySize);
-
+        if (modelsLoaded && img.complete) {
             // SsdMobilenetv1Options
             // TinyFaceDetectorOptions
             const detections = await faceapi.detectAllFaces(img, new faceapi.SsdMobilenetv1Options())
-                .withFaceLandmarks();
-
-            const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
             // 計算處理時間並轉換為秒
             const endTime = performance.now();
@@ -72,12 +66,6 @@ function MultipleImageComponent() {
                 newProcessingTimes[index] = processingTime;
                 return newProcessingTimes;
             });
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.clearRect(0, 0, img.width, img.height);
-            faceapi.draw.drawDetections(canvas, resizedDetections);
-            faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
 
             // 檢查規則並顯示訊息
             const ruleMessages = [];
@@ -101,12 +89,12 @@ function MultipleImageComponent() {
                 return;
             }
 
-            const faceArea = faceCount > 0 ? (detections[0].detection.box.area / (detections[0].detection.imageHeight * detections[0].detection.imageWidth)) * 100 : 0;
+            const faceArea = faceCount > 0 ? (detections[0].box.area / (detections[0].imageHeight * detections[0].imageWidth)) * 100 : 0;
 
-            if (detections[0].detection.imageWidth < 640) {
+            if (detections[0].imageWidth < 640) {
                 ruleMessages.push('寬度至少要有640px');
             }
-            if (detections[0].detection.imageHeight < 480) {
+            if (detections[0].imageHeight < 480) {
                 ruleMessages.push('高度至少要有480px');
             }
             if (faceArea < 10) {
@@ -172,7 +160,7 @@ function MultipleImageComponent() {
                     <div key={index} className={styles.photoCanvasContainer}>
                         <div className={styles.photoContainer}>
                             <img src={photo} alt='photo' className={styles.photo} onLoad={handleImageLoad} />
-                            <canvas className={styles.overlayCanvas} ref={ref => canvasRefs.current[index] = ref!} />
+                            {/* <canvas className={styles.overlayCanvas} ref={ref => canvasRefs.current[index] = ref!} /> */}
                             <div className={styles.message}>{messages[index]}</div>
                             <button className={styles.removeButton} onClick={() => removePhoto(index)}>X</button>
                         </div>
