@@ -8,6 +8,7 @@ function MultipleImageComponent() {
     const [faceAreas, setFaceAreas] = useState<number[]>([]);
     const [messages, setMessages] = useState<string[]>([]);
     const canvasRefs = useRef<HTMLCanvasElement[]>([]);
+    const inputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
         const loadModels = async () => {
             const MODEL_URL = '/models';
@@ -24,8 +25,8 @@ function MultipleImageComponent() {
         loadModels();
     }, []);
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement> | FileList) => {
+        const files = 'length' in e ? e : e.target.files; // 處理不同參數型別
         if (!files) return;
         const newPhotos: string[] = [];
 
@@ -113,68 +114,47 @@ function MultipleImageComponent() {
         }
     }
 
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            // 將拖放的文件設置到 input 元素
+            inputRef.current.files = files;
+            handleImageUpload(files);
+        }
+    };
 
-    // const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    //     const img = e.target as HTMLImageElement;
-    //     const imageUrl = img.src;
-    //     const index = photos.indexOf(imageUrl);
-    //     if (modelsLoaded && img.complete) {
-
-    //         // SsdMobilenetv1Options
-    //         // TinyFaceDetectorOptions
-    //         const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-    //             .withFaceLandmarks();
-
-    //         // 檢查規則並顯示訊息
-    //         const ruleMessages = [];
-    //         const faceCount = detections.length;
-    //         if (faceCount === 0) {
-    //             ruleMessages.push('沒有偵測到人臉');
-    //             setMessages(prevMessages => {
-    //                 const newMessages = [...prevMessages];
-    //                 newMessages[index] = ruleMessages.join('，');
-    //                 return newMessages;
-    //             });
-    //             return;
-    //         }
-    //         if (faceCount > 1) {
-    //             ruleMessages.push('偵測到多個人臉');
-    //             setMessages(prevMessages => {
-    //                 const newMessages = [...prevMessages];
-    //                 newMessages[index] = ruleMessages.join('，');
-    //                 return newMessages;
-    //             });
-    //             return;
-    //         }
-
-    //         const faceArea = faceCount > 0 ? (detections[0].detection.box.area / (detections[0].detection.imageHeight * detections[0].detection.imageWidth)) * 100 : 0;
-
-    //         if (detections[0].detection.imageWidth < 640) {
-    //             ruleMessages.push('寬度至少要有640px');
-    //         }
-    //         if (detections[0].detection.imageHeight < 480) {
-    //             ruleMessages.push('高度至少要有480px');
-    //         }
-    //         if (faceArea < 10) {
-    //             ruleMessages.push('face area至少要有10%');
-    //         }
-
-    //         setFaceAreas(prevFaceAreas => {
-    //             const newFaceAreas = [...prevFaceAreas];
-    //             newFaceAreas[index] = faceArea;
-    //             return newFaceAreas;
-    //         });
-    //         setMessages(prevMessages => {
-    //             const newMessages = [...prevMessages];
-    //             newMessages[index] = ruleMessages.join('，');
-    //             return newMessages;
-    //         });
-    //     }
-    // }
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
 
     return (
         <div>
-            <input type="file" accept="image/*" multiple onChange={handleImageUpload} title='image' />
+            <input
+                className={styles.inputFile}
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                title='image'
+            />
+            <div className={styles.inputFileArea}
+                onClick={() => inputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}>
+                <div className={styles.inputFileText}>Upload</div>
+            </div>
+            <div className={styles.sampleImageContainer}>
+                {[...Array(5)].map((_, index) => (
+                    <div key={index} className={styles.sampleImage}>
+                        <img src={`/images/sample${index + 1}.jpg`}
+                            alt={`sample${index + 1}`} className={styles.sampleImage}
+                        />
+                    </div>
+                ))}
+            </div>
+
             <div className={styles.container}>
                 {photos.map((photo, index) => (
                     <div key={index} className={styles.photoCanvasContainer}>
