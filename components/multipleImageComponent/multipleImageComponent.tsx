@@ -9,21 +9,24 @@ function MultipleImageComponent() {
     const [messages, setMessages] = useState<string[]>([]);
     // 處理各張圖片的時間，單位為秒，用於顯示在畫面上
     const [processingTimes, setProcessingTimes] = useState<number[]>([]);
+    const [loadingTime, setLoadingTime] = useState<number>(0);
     // const canvasRefs = useRef<HTMLCanvasElement[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     useEffect(() => {
         const loadModels = async () => {
+            const start = new Date();
             const MODEL_URL = '/models';
-
             await Promise.all([
                 faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
                 // faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                 // faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
             ]);
-
+            const end = new Date();
+            const loadingTime = (end.getTime() - start.getTime()) / 1000;
+            console.log(`Loading time: ${loadingTime} seconds`);
+            setLoadingTime(loadingTime);
             setModelsLoaded(true);
         };
-
         loadModels();
     }, []);
 
@@ -145,6 +148,7 @@ function MultipleImageComponent() {
                 onDragOver={handleDragOver}>
                 <div className={styles.inputFileText}>Upload</div>
             </div>
+            {loadingTime > 0 && <div>Models loaded in {loadingTime} seconds</div>}
             <div className={styles.sampleImageContainer}>
                 {[...Array(5)].map((_, index) => (
                     <div key={index} className={styles.sampleImage}>
