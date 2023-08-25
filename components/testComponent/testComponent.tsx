@@ -7,6 +7,7 @@ function testComponent() {
     const { detectFace } = useDetectFace();
     const [photos, setPhotos] = useState<string[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [messages, setMessages] = useState<string[]>([]);
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement> | FileList) => {
         const files = 'length' in e ? e : e.target.files; // 處理不同參數型別
         if (!files) return;
@@ -23,9 +24,26 @@ function testComponent() {
 
     const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         const img = e.target as HTMLImageElement;
+
+        const imageUrl = img.src;
+        const index = photos.indexOf(imageUrl);
+
         if (img.complete) {
             const result = await detectFace(img)
-            console.log(result)
+            if (result) {
+                setMessages(prevMessages => {
+                    const newMessages = [...prevMessages];
+                    newMessages[index] = '偵測到人臉';
+                    return newMessages;
+                });
+            }
+            else {
+                setMessages(prevMessages => {
+                    const newMessages = [...prevMessages];
+                    newMessages[index] = '沒有偵測到人臉';
+                    return newMessages;
+                });
+            }
         }
     }
 
@@ -47,6 +65,7 @@ function testComponent() {
                         alt="photo"
                         onLoad={handleImageLoad}
                     />
+                    {messages[index]}
                 </div>
             ))}
         </>
