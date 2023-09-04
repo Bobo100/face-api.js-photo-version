@@ -29,21 +29,13 @@ function testComponent() {
         const index = photos.indexOf(imageUrl);
 
         if (img.complete) {
-            const result = await detectFace(img)
-            if (result) {
-                setMessages(prevMessages => {
-                    const newMessages = [...prevMessages];
-                    newMessages[index] = '偵測到人臉';
-                    return newMessages;
-                });
-            }
-            else {
-                setMessages(prevMessages => {
-                    const newMessages = [...prevMessages];
-                    newMessages[index] = '沒有偵測到人臉';
-                    return newMessages;
-                });
-            }
+            const message = await detectFace(img)
+            console.log(message)
+            setMessages(prevMessages => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = message.message.join(' ');
+                return newMessages;
+            });
         }
     }
 

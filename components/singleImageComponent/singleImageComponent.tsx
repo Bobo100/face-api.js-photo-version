@@ -40,10 +40,10 @@ function singleImageComponent() {
 
             const detections = await faceapi.detectSingleFace(img, new faceapi.SsdMobilenetv1Options())
                 .withFaceLandmarks();
-                
+
             console.log(detections);
             setFaceArea(detections.detection.box.area / (detections.detection.imageHeight * detections.detection.imageWidth) * 100);
-
+            console.log(detections.landmarks.getLeftEye(), detections.landmarks.getRightEye());
             const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
             const ctx = canvas.getContext('2d');
