@@ -1,97 +1,113 @@
 // components/HumanComponent.js
 import { useEffect, useState, useRef } from 'react';
 import styles from './humanComponent.module.scss'
-import type { Config } from '@vladmandic/human';
-// import * as tf from '@tensorflow/tfjs';
-
-// import type * as tfjs from '@vladmandic/human/dist/tfjs.esm';
-// import Human from '@vladmandic/human';
-
-
+import type { Human, Config } from '@vladmandic/human';
+import * as tf from '@tensorflow/tfjs';
 const HumanComponent = () => {
-
-    // const human = new Human();
-    // const tf = human.tf as typeof tfjs;
-
     const humanConfig: Partial<Config> = {
         debug: true,
-        modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models',
         backend: 'webgl',
+        modelBasePath: '../models',
         filter: { enabled: true, equalization: false, flip: false },
         face: {
             enabled: true,
-            detector: { rotation: false, maxDetected: 100, minConfidence: 0.2, return: true },
-            iris: { enabled: true },
-            description: { enabled: true },
-            emotion: { enabled: true },
-            antispoof: { enabled: true },
-            liveness: { enabled: true },
+            detector: { rotation: false, maxDetected: 2, minConfidence: 0.2, return: true },
+            iris: { enabled: false },
+            description: { enabled: false },
+            emotion: { enabled: false },
+            antispoof: { enabled: false },
+            liveness: { enabled: false },
         },
         body: { enabled: false },
         hand: { enabled: false },
         object: { enabled: false },
         gesture: { enabled: false },
         segmentation: { enabled: false },
+        async: true,
+        cacheModels: true,
     };
 
-    const [humanInstance, setHumanInstance] = useState(null);
+    const [human, setHuman] = useState(null);
     const [ready, setReady] = useState(false);
+    const [pitch, setPitch] = useState(0);
+    const [yaw, setYaw] = useState(0);
+    const [roll, setRoll] = useState(0);
+    const imageContainerRef = useRef(null);
     const imagesRef = useRef(null);
     const canvasRef = useRef(null);
 
-    async function importHuman() {
-        const { Human } = await import('@vladmandic/human');
-        const instance = new Human(humanConfig);
-        setHumanInstance(instance);
-        setReady(true);
-    }
 
     useEffect(() => {
         importHuman();
-    }, [])
-
-    // // 這部分替代了原本的window.onload
-    // async function initTensorFlow() {
-    //     // await tf.setBackend('webgpu');
-    //     await tf.ready();
-    // }
-
-    // async function loadHuman() {
-    //     const { Human } = await import('./human.esm.js');
-    //     const instance = new Human(humanConfig);  // 這裡你可以使用你的`humanConfig`                
-    //     setHumanInstance(instance);
-    //     setReady(true);
-    // }
-
-
-    // // 然後在你的主功能或組件的`useEffect`中調用此函數：
-    // useEffect(() => {
-    //     initTensorFlow().then(() => {
-    //         // 這裡進行其他TensorFlow.js操作
-    //         console.log('TensorFlow.js is ready!')
-    //         loadHuman();
-    //     });
-    // }, [])
-
-
-    // 其他函數保持不變，但可能需要輕微的修改，例如對DOM的參考應使用useRef而不是直接訪問。
+        async function importHuman() {
+            await import('@vladmandic/human').then(async (Human) => {
+                const instance = new Human.default(humanConfig) as Human;
+                // console.log('human version:', instance.version, '| tfjs version:', instance.tf.version['tfjs-core']);
+                // console.log('platform:', instance.env.platform, '| agent:', instance.env.agent);
+                // console.log('loading models...')
+                // console.log(instance)
+                // console.log('backend', instance!.tf.getBackend(), '| available：', instance!.env.backends);
+                // console.log('loaded models:' + Object.values(instance!.models).filter((model) => model !== null).length);
+                // console.log('initializing...')
+                instance!.warmup().then(() => { // warmup function to initialize backend for future faster detection
+                    // console.log('ready...')
+                    setHuman(instance);
+                    setReady(true);
+                });
+                // if (instance.state !== "backend") {
+                //     console.log(instance.load())
+                //     await instance.load().then(() => { // preload all models
+                //         console.log('backend', instance!.tf.getBackend(), '| available：', instance!.env.backends);
+                //         console.log('loaded models:' + Object.values(instance!.models).filter((model) => model !== null).length);
+                //         console.log('initializing...')
+                //         instance!.warmup().then(() => { // warmup function to initialize backend for future faster detection
+                //             console.log('ready...')
+                //             setHuman(instance);
+                //             setReady(true);
+                //         });
+                //     });
+                // }
+            });
+        }
+    }, []);
 
     async function detectFaces() {
-        if (!imagesRef.current || !canvasRef.current) return;
-
-        // Set canvas dimensions to match image dimensions
-        canvasRef.current.width = imagesRef.current.width;
-        canvasRef.current.height = imagesRef.current.height;
-
-        // canvasRef.current要先清空
+        if (!imagesRef.current || !canvasRef.current || !ready) return;
         const ctx = canvasRef.current.getContext('2d');
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-        humanInstance.detect(imagesRef.current).then((result) => {
-            console.log("detectFaces")
-            humanInstance.draw.all(canvasRef.current, result)
-            console.log(result)
-        });
+        const detect = await human.detect(imagesRef.current);
+        if (detect) {
+            console.log('detect')
+            canvasRef.current.width = detect.width;
+            canvasRef.current.height = detect.height;
+            human.draw.all(canvasRef.current, detect)
+            console.log(detect)
+
+            if (detect.face && detect.face.length === 1) {
+                const face = detect.face[0];
+                setPitch(radianToDegree(face.rotation.angle.pitch));
+                setYaw(radianToDegree(face.rotation.angle.yaw));
+                setRoll(radianToDegree(face.rotation.angle.roll));
+            }
+        } else {
+            console.log('no detect')
+        }
+    }
+
+    const radianToDegree = (radian: number) => {
+        return radian * 180 / Math.PI;
+    }
+
+    // pitch 不能超過10度
+    // yaw 不能超過15度
+
+    const isOverPitch = (degree: number) => {
+        return Math.abs(degree) > 10;
+    }
+
+    const isOverYaw = (degree: number) => {
+        return Math.abs(degree) > 15;
     }
 
     if (!ready) {
@@ -100,15 +116,29 @@ const HumanComponent = () => {
 
     return (
         <div className={styles.container}>
-            <input type="file" accept="image/*" onChange={(e) => {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    imagesRef.current.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            }} />
-            <div className={styles.imageContainer}>
+            <div>
+                <input type="file" accept="image/*" onChange={(e) => {
+                    const file = e.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        imagesRef.current.src = event.target.result;
+                    };
+                    if (file)
+                        reader.readAsDataURL(file);
+                }} />
+                <div className={isOverPitch(pitch) ? styles.red : ''}>
+                    {`Pitch: ${pitch}`}
+                </div>
+                <div className={isOverYaw(yaw) ? styles.red : ''}>
+                    {`Yaw: ${yaw}`}
+                </div>
+                <div>
+                    {`Roll: ${roll}`}
+                </div>
+            </div>
+            <div className={styles.imageContainer}
+                ref={imageContainerRef}
+            >
                 <img
                     ref={imagesRef}
                     alt="test"
@@ -118,7 +148,7 @@ const HumanComponent = () => {
                     className={styles.canvas}
                     ref={canvasRef} />
             </div>
-        </div>
+        </div >
     );
 };
 

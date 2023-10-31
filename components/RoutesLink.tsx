@@ -9,6 +9,7 @@ const RouterLink = () => {
             <Link href="/multipleImage" className={router.pathname === "/multipleImage" ? "active" : ""}>Multiple Image</Link>
             <Link href="/test" className={router.pathname === "/test" ? "active" : ""}>Test</Link>
             <Link href="/human" className={router.pathname === "/human" ? "active" : ""}>Human</Link>
+            <Link href="/human2" className={router.pathname === "/human2" ? "active" : ""}>Human2</Link>
         </>
     )
 }
