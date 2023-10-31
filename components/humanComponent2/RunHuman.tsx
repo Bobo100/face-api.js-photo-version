@@ -4,7 +4,7 @@ import type { Human, Config } from '@vladmandic/human';
 const config: Partial<Config> = {
   debug: false,
   backend: 'webgl',
-  modelBasePath: './models',
+  modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models',
   filter: { enabled: true, equalization: false, flip: false },
   face: {
     enabled: true,
@@ -20,8 +20,6 @@ const config: Partial<Config> = {
   object: { enabled: false },
   gesture: { enabled: false },
   segmentation: { enabled: false },
-  async: true,
-  cacheModels: true,
 }
 
 interface Props { inputId: string, outputId: string };

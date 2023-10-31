@@ -7,7 +7,7 @@ const HumanComponent = () => {
     const humanConfig: Partial<Config> = {
         debug: true,
         backend: 'webgl',
-        modelBasePath: '../models',
+        // modelBasePath: '../models',
         filter: { enabled: true, equalization: false, flip: false },
         face: {
             enabled: true,
@@ -41,32 +41,22 @@ const HumanComponent = () => {
         importHuman();
         async function importHuman() {
             await import('@vladmandic/human').then(async (Human) => {
+                // console.log("Human...", Human)
                 const instance = new Human.default(humanConfig) as Human;
                 // console.log('human version:', instance.version, '| tfjs version:', instance.tf.version['tfjs-core']);
                 // console.log('platform:', instance.env.platform, '| agent:', instance.env.agent);
                 // console.log('loading models...')
-                // console.log(instance)
-                // console.log('backend', instance!.tf.getBackend(), '| available：', instance!.env.backends);
-                // console.log('loaded models:' + Object.values(instance!.models).filter((model) => model !== null).length);
-                // console.log('initializing...')
-                instance!.warmup().then(() => { // warmup function to initialize backend for future faster detection
-                    // console.log('ready...')
-                    setHuman(instance);
-                    setReady(true);
+                // console.log("instance...", instance)
+                await instance.load().then(() => { // preload all models
+                    // console.log('backend', instance!.tf.getBackend(), '| available：', instance!.env.backends);
+                    // console.log('loaded models:' + Object.values(instance!.models).filter((model) => model !== null).length);
+                    // console.log('initializing...')
+                    instance!.warmup().then(() => { // warmup function to initialize backend for future faster detection
+                        // console.log('ready...')
+                        setHuman(instance);
+                        setReady(true);
+                    });
                 });
-                // if (instance.state !== "backend") {
-                //     console.log(instance.load())
-                //     await instance.load().then(() => { // preload all models
-                //         console.log('backend', instance!.tf.getBackend(), '| available：', instance!.env.backends);
-                //         console.log('loaded models:' + Object.values(instance!.models).filter((model) => model !== null).length);
-                //         console.log('initializing...')
-                //         instance!.warmup().then(() => { // warmup function to initialize backend for future faster detection
-                //             console.log('ready...')
-                //             setHuman(instance);
-                //             setReady(true);
-                //         });
-                //     });
-                // }
             });
         }
     }, []);
@@ -89,6 +79,18 @@ const HumanComponent = () => {
                 setPitch(radianToDegree(face.rotation.angle.pitch));
                 setYaw(radianToDegree(face.rotation.angle.yaw));
                 setRoll(radianToDegree(face.rotation.angle.roll));
+
+                const box = face.box;
+                const size = face.size;
+                // box分別是x y width height
+                const x = box[0];
+                const y = box[1];
+                const width = box[2];
+                const height = box[3];
+                // 然後畫一個紅色的框框在canvas上
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 5;
+                ctx.strokeRect(x, y, width, height);
             }
         } else {
             console.log('no detect')
