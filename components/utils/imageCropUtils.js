@@ -1,3 +1,4 @@
+import imageUtils from "./imageUtils";
 import _get from "lodash/get";
 import _sumBy from "lodash/sumBy";
 import _size from "lodash/size";
@@ -41,6 +42,28 @@ const imageCropUtils = {
       0.5;
     return { avgEyePoints, eyeCenter, eyeDistance };
   },
+  drawScaleCropImage: (image, cropInfo, scale = 1.0) => {
+    const { cropLeft, cropRight, cropTop, cropBottom } = cropInfo;
+    const canvas = document.createElement("canvas");
+    const width = cropRight - cropLeft;
+    const height = cropBottom - cropTop;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(
+      image,
+      cropLeft,
+      cropTop,
+      width,
+      height,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    const b64 = canvas.toDataURL("image/jpeg");
+    return imageUtils.base64ToBlob(b64);
+  },
   cropFaceForMakeup: (
     image,
     eyePoints,
@@ -51,27 +74,16 @@ const imageCropUtils = {
   ) => {
     let smartCropBboxError = false;
     const { width: imgWidth, height: imgHeight } = image;
-    const wUp = parseInt(imgWidth * upscaleFactor);
     const hUp = parseInt(imgHeight * upscaleFactor);
+    const wUp = parseInt(imgWidth * upscaleFactor);
 
     const newSrcBbox = srcBbox.map((coord) => coord * upscaleFactor);
 
     const { avgEyePoints, eyeCenter, eyeDistance } =
       imageCropUtils.getEyePointsInfo(eyePoints, upscaleFactor);
-    console.log(
-      "avgEyePoints",
-      avgEyePoints,
-      "eyeCenter",
-      eyeCenter,
-      "eyeDistance",
-      eyeDistance
-    );
 
-    const cropWidth = parseInt(eyeDistance * edgeFactorW);
-    const cropHeight = parseInt(eyeDistance * edgeFactorH);
-
-    let targetEdgeW = cropWidth;
-    let targetEdgeH = cropHeight;
+    let targetEdgeW = parseInt(eyeDistance * edgeFactorW);
+    let targetEdgeH = parseInt(eyeDistance * edgeFactorH);
     targetEdgeW = targetEdgeW < wUp ? targetEdgeW : wUp;
     targetEdgeH = targetEdgeH < hUp ? targetEdgeH : hUp;
 
@@ -96,6 +108,7 @@ const imageCropUtils = {
       cropHEnd > hUp
         ? parseInt(cropHBegin - (cropHEnd - hUp))
         : parseInt(cropHBegin);
+
     const smartCropBbox = {
       cropLeft: newSrcBbox[0] - cropWBegin,
       cropTop: newSrcBbox[1] - cropHBegin,
@@ -103,27 +116,41 @@ const imageCropUtils = {
       cropBottom: newSrcBbox[3] - cropHBegin,
     };
 
-    console.log("smartCropBbox", smartCropBbox);
-
-    const cropLeft = Math.max(eyeCenter.x - cropWidth / 2, 0);
-    const cropRight = Math.min(eyeCenter.x + cropWidth / 2, imgWidth);
-    const cropTop = Math.max(eyeCenter.y - cropHeight * 0.4, 0);
-    const cropBottom = Math.min(
-      eyeCenter.y + (cropHeight - cropHeight * 0.4),
-      imgHeight
-    );
+    const cropWidth = smartCropBbox.cropRight - smartCropBbox.cropLeft;
+    const cropHeight = smartCropBbox.cropBottom - smartCropBbox.cropTop;
     const cropLongerSide = Math.max(cropWidth, cropHeight);
     const scale = cropLongerSide > 1024 ? 1024 / cropLongerSide : 1;
+    const blob = imageCropUtils.drawScaleCropImage(
+      image,
+      {
+        cropLeft: cropWBegin,
+        cropRight: cropWBegin + targetEdgeW,
+        cropTop: cropHBegin,
+        cropBottom: cropHBegin + targetEdgeH,
+      },
+      scale
+    );
+    // 下載blob
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "crop.jpg";
+    a.click();
+    URL.revokeObjectURL(a.href);
     return {
       scale,
       cropRect: {
-        cropLeft: cropLeft * scale,
-        cropRight: cropRight * scale,
-        cropTop: cropTop * scale,
-        cropBottom: cropBottom * scale,
+        // cropLeft: smartCropBbox.cropLeft * scale,
+        // cropRight: smartCropBbox.cropRight * scale,
+        // cropTop: smartCropBbox.cropTop * scale,
+        // cropBottom: smartCropBbox.cropBottom * scale,
+        cropLeft: cropWBegin * scale,
+        cropRight: (cropWBegin + targetEdgeW) * scale,
+        cropTop: cropHBegin * scale,
+        cropBottom: (cropHBegin + targetEdgeH) * scale,
       },
       smartCropBbox,
       smartCropBboxError,
+      cropBlob: blob,
       originalImage: {
         width: imgWidth,
         height: imgHeight,

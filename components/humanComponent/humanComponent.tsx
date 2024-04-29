@@ -18,15 +18,15 @@ const lipsArray = [
     'lipsLowerSemiOuter',
 ];
 
-const temp = [332.0, 514.0, 786.0, 1155.0]
+const temp = [374.0, 401.0, 820.0, 1046.0]
 const tempEyePoints = {
     left: [{
-        x: 513,
-        y: 761
+        x: 507,
+        y: 645
     }],
     right: [{
-        x: 724,
-        y: 773
+        x: 726,
+        y: 644
     }]
 }
 
@@ -265,7 +265,6 @@ const HumanComponent = () => {
                 //     right: rightEyePoints,
                 // };
 
-
                 const eyePoints = tempEyePoints;
                 // console.log('eyePoints', eyePoints)
 
@@ -325,6 +324,7 @@ const HumanComponent = () => {
                     cropRect,
                     smartCropBbox,
                     smartCropBboxError,
+                    cropBlob,
                     originalImage,
                     avgEyePoints,
                     eyeCenter
@@ -406,19 +406,19 @@ const HumanComponent = () => {
                 ctx.fillStyle = 'red';
                 ctx.fill();
 
-                const rect = temp;
-                ctx.beginPath();
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = 'yellow';
-                ctx.moveTo(rect[0], rect[1]);
-                ctx.lineTo(rect[2], rect[1]);
-                ctx.lineTo(rect[2], rect[3]);
-                ctx.lineTo(rect[0], rect[3]);
-                ctx.lineTo(rect[0], rect[1]);
-                ctx.stroke();
-                ctx.font = '30px Arial';
-                ctx.fillStyle = 'yellow';
-                ctx.fillText('BBox固定的', rect[0], rect[1]);
+                // const rect = temp;
+                // ctx.beginPath();
+                // ctx.lineWidth = 3;
+                // ctx.strokeStyle = 'yellow';
+                // ctx.moveTo(rect[0], rect[1]);
+                // ctx.lineTo(rect[2], rect[1]);
+                // ctx.lineTo(rect[2], rect[3]);
+                // ctx.lineTo(rect[0], rect[3]);
+                // ctx.lineTo(rect[0], rect[1]);
+                // ctx.stroke();
+                // ctx.font = '30px Arial';
+                // ctx.fillStyle = 'yellow';
+                // ctx.fillText('BBox固定的', rect[0], rect[1]);
 
             }
         } else {
