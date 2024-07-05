@@ -1,8 +1,8 @@
 // components/HumanComponent.js
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import styles from './humanComponent.module.scss'
-import type { Human, Config } from '@vladmandic/human';
 import imageCropUtils from '../utils/imageCropUtils';
+import useDetectFace from '../hooks/use-detect-face';
 
 const leftEyeArray = ['leftEyeUpper0', 'leftEyeLower0'];
 const rightEyeArray = ['rightEyeUpper0', 'rightEyeLower0'];
@@ -32,32 +32,74 @@ const tempEyePoints = {
 
 const LIMIT_FACE_AREA = 128 * 128;
 const LIMIT_FACE_WIDTH = 200;
-const HumanComponent = () => {
-    const humanConfig: Partial<Config> = {
-        debug: true,
-        backend: 'webgl',
-        // modelBasePath: '../models',
-        filter: { enabled: true, equalization: false, flip: false },
-        face: {
-            enabled: true,
-            detector: { rotation: false, maxDetected: 2, minConfidence: 0.2, return: true },
-            iris: { enabled: false },
-            description: { enabled: false },
-            emotion: { enabled: false },
-            antispoof: { enabled: false },
-            liveness: { enabled: false },
-        },
-        body: { enabled: false },
-        hand: { enabled: false },
-        object: { enabled: false },
-        gesture: { enabled: false },
-        segmentation: { enabled: false },
-        async: true,
-        cacheModels: true,
-    };
 
-    const [human, setHuman] = useState(null);
-    const [ready, setReady] = useState(false);
+const boundingBox = (points) => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (let [x, y] of points) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+    }
+
+    return { minX, minY, maxX, maxY };
+};
+
+const getAnnotationPoints = (faceData: any, annotationName: string) => {
+    if (!faceData || !annotationName) return;
+    const points = faceData.annotations[annotationName].map((point: any) => {
+        return { x: point[0], y: point[1] };
+    });
+    return points;
+}
+
+const findLeftRightPoints = (points: any) => {
+    // 初始化最左邊和最右邊的點的 x 和 y 坐標為第一個點的坐標
+    let leftPoint = { x: points[0].x, y: points[0].y };
+    let rightPoint = { x: points[0].x, y: points[0].y };
+
+    // 遍歷每個點，找到最左邊和最右邊的點
+    points.forEach((point) => {
+        // 如果當前點的 x 坐標小於最左邊的點的 x 坐標，則更新最左邊的點
+        if (point.x < leftPoint.x) {
+            leftPoint.x = point.x;
+            leftPoint.y = point.y;
+        }
+        // 如果當前點的 x 坐標大於最右邊的點的 x 坐標，則更新最右邊的點
+        if (point.x > rightPoint.x) {
+            rightPoint.x = point.x;
+            rightPoint.y = point.y;
+        }
+    });
+
+    // 返回最左邊和最右邊的點的 x 和 y 坐標
+    return { leftPoint, rightPoint };
+}
+
+const findEyeCenter = (eyePoints: any) => {
+    // 初始化眼睛中心點的 x 和 y 坐標為 0
+    let centerX = 0;
+    let centerY = 0;
+
+    // 遍歷眼睛的所有點，將所有點的 x 和 y 坐標相加
+    eyePoints.forEach((point: any) => {
+        centerX += point.x;
+        centerY += point.y;
+    });
+
+    // 然後分別除以點的個數，得到眼睛中心點的 x 和 y 坐標
+    centerX /= eyePoints.length;
+    centerY /= eyePoints.length;
+
+    // 返回眼睛中心點的 x 和 y 坐標
+    return { x: centerX, y: centerY };
+}
+
+const HumanComponent = () => {
     const [pitch, setPitch] = useState(0);
     const [yaw, setYaw] = useState(0);
     const [roll, setRoll] = useState(0);
@@ -65,100 +107,10 @@ const HumanComponent = () => {
     const imagesRef = useRef(null);
     const canvasRef = useRef(null);
 
-
-    useEffect(() => {
-        importHuman();
-        async function importHuman() {
-            await import('@vladmandic/human').then(async (Human) => {
-                // console.log("Human...", Human)
-                const instance = new Human.default(humanConfig) as Human;
-                // console.log('human version:', instance.version, '| tfjs version:', instance.tf.version['tfjs-core']);
-                // console.log('platform:', instance.env.platform, '| agent:', instance.env.agent);
-                // console.log('loading models...')
-                // console.log("instance...", instance)
-                await instance.load().then(() => { // preload all models
-                    // console.log('backend', instance!.tf.getBackend(), '| available：', instance!.env.backends);
-                    // console.log('loaded models:' + Object.values(instance!.models).filter((model) => model !== null).length);
-                    // console.log('initializing...')
-                    instance!.warmup().then(() => { // warmup function to initialize backend for future faster detection
-                        // console.log('ready...')
-                        setHuman(instance);
-                        setReady(true);
-                    });
-                });
-            });
-        }
-    }, []);
-
-    const boundingBox = (points) => {
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        for (let [x, y] of points) {
-            if (x < minX) minX = x;
-            if (y < minY) minY = y;
-            if (x > maxX) maxX = x;
-            if (y > maxY) maxY = y;
-        }
-
-        return { minX, minY, maxX, maxY };
-    };
-
-    const getAnnotationPoints = (faceData: any, annotationName: string) => {
-        if (!faceData || !annotationName) return;
-        const points = faceData.annotations[annotationName].map((point: any) => {
-            return { x: point[0], y: point[1] };
-        });
-        return points;
-    }
-
-    const findLeftRightPoints = (points: any) => {
-        // 初始化最左邊和最右邊的點的 x 和 y 坐標為第一個點的坐標
-        let leftPoint = { x: points[0].x, y: points[0].y };
-        let rightPoint = { x: points[0].x, y: points[0].y };
-
-        // 遍歷每個點，找到最左邊和最右邊的點
-        points.forEach((point) => {
-            // 如果當前點的 x 坐標小於最左邊的點的 x 坐標，則更新最左邊的點
-            if (point.x < leftPoint.x) {
-                leftPoint.x = point.x;
-                leftPoint.y = point.y;
-            }
-            // 如果當前點的 x 坐標大於最右邊的點的 x 坐標，則更新最右邊的點
-            if (point.x > rightPoint.x) {
-                rightPoint.x = point.x;
-                rightPoint.y = point.y;
-            }
-        });
-
-        // 返回最左邊和最右邊的點的 x 和 y 坐標
-        return { leftPoint, rightPoint };
-    }
-
-    const findEyeCenter = (eyePoints: any) => {
-        // 初始化眼睛中心點的 x 和 y 坐標為 0
-        let centerX = 0;
-        let centerY = 0;
-
-        // 遍歷眼睛的所有點，將所有點的 x 和 y 坐標相加
-        eyePoints.forEach((point: any) => {
-            centerX += point.x;
-            centerY += point.y;
-        });
-
-        // 然後分別除以點的個數，得到眼睛中心點的 x 和 y 坐標
-        centerX /= eyePoints.length;
-        centerY /= eyePoints.length;
-
-        // 返回眼睛中心點的 x 和 y 坐標
-        return { x: centerX, y: centerY };
-    }
-
+    const { human, modelsLoaded } = useDetectFace()
 
     async function detectFaces() {
-        if (!imagesRef.current || !canvasRef.current || !ready) return;
+        if (!imagesRef.current || !canvasRef.current || !modelsLoaded) return;
         const ctx = canvasRef.current.getContext('2d');
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
@@ -243,9 +195,6 @@ const HumanComponent = () => {
                 ctx.arc(rightLipsPoint.x, rightLipsPoint.y, 2, 0, 2 * Math.PI);
                 ctx.fillStyle = 'red';
                 ctx.fill();
-
-
-
 
                 // 找眼睛
                 const leftEyePoints = leftEyeArray
@@ -441,7 +390,7 @@ const HumanComponent = () => {
         return Math.abs(degree) > 15;
     }
 
-    if (!ready) {
+    if (!modelsLoaded) {
         return <div>Loading...</div>;
     }
 
